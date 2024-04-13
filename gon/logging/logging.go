@@ -42,13 +42,13 @@ func Logging(next http.Handler) http.Handler {
 		}
 		//	log.Printf("%s %s %d", r.Method, r.URL.Path, statusCode)
 		if wrapped.statusCode >= 200 && wrapped.statusCode < 300 {
-			logger.LOG(wrapped.statusCode, r.URL.Path, r.URL.Query(), time.Since(start))
+			logger.LOG(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
 		} else if wrapped.statusCode >= 400 && wrapped.statusCode < 500 {
-			logger.BAD(wrapped.statusCode, r.URL.Path, r.URL.Query(), time.Since(start))
+			logger.BAD(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
 		} else if wrapped.statusCode >= 500 {
-			logger.ERROR(wrapped.statusCode, r.URL.Path, r.URL.Query(), time.Since(start))
+			logger.ERROR(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
 		} else {
-			logger.WARN(wrapped.statusCode, r.URL.Path, r.URL.Query(), time.Since(start))
+			logger.WARN(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
 		}
 	})
 }
