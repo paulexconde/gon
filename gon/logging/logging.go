@@ -38,17 +38,11 @@ func (w *wrappedWriter) Write(b []byte) (int, error) {
 func Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-
-		if isWebSocketUpgrade(r) {
-			// Handle WebSocket separately
-			next.ServeHTTP(w, r)
-			// Log WebSocket upgrade - not interfering with headers or status code
-			logger.INFO("WebSocket upgrade requested", r.URL.Path, time.Since(start))
-			return
-		}
+		upgrade := isWebSocketUpgrade(r)
 
 		wrapped := &wrappedWriter{
-			ResponseWriter: w,
+			ResponseWriter:     w,
+			isWebSocketUpgrade: upgrade,
 		}
 
 		next.ServeHTTP(wrapped, r)
@@ -58,15 +52,19 @@ func Logging(next http.Handler) http.Handler {
 		if statusCode == 0 {
 			statusCode = http.StatusOK
 		}
-		//	log.Printf("%s %s %d", r.Method, r.URL.Path, statusCode)
-		if wrapped.statusCode >= 200 && wrapped.statusCode < 300 {
-			logger.LOG(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
-		} else if wrapped.statusCode >= 400 && wrapped.statusCode < 500 {
-			logger.BAD(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
-		} else if wrapped.statusCode >= 500 {
-			logger.ERROR(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
+
+		if !upgrade {
+			if wrapped.statusCode >= 200 && wrapped.statusCode < 300 {
+				logger.LOG(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
+			} else if wrapped.statusCode >= 400 && wrapped.statusCode < 500 {
+				logger.BAD(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
+			} else if wrapped.statusCode >= 500 {
+				logger.ERROR(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
+			} else {
+				logger.WARN(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
+			}
 		} else {
-			logger.WARN(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
+			logger.INFO("WS Connection", wrapped.statusCode, r.URL.Path, time.Since(start))
 		}
 	})
 }
