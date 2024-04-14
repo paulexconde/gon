@@ -23,7 +23,7 @@ func (w *wrappedWriter) WriteHeader(statusCode int) {
 }
 
 func (w *wrappedWriter) Write(b []byte) (int, error) {
-	if !w.isWebSocketUpgrade {
+	if w.isWebSocketUpgrade {
 		w.ResponseWriter.Write(b)
 	}
 
