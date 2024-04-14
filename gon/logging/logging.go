@@ -10,17 +10,26 @@ import (
 
 type wrappedWriter struct {
 	http.ResponseWriter
-	statusCode int
+	statusCode         int
+	isWebSocketUpgrade bool
 }
 
 func (w *wrappedWriter) WriteHeader(statusCode int) {
 	w.statusCode = statusCode
-	w.ResponseWriter.WriteHeader(statusCode)
+
+	if !w.isWebSocketUpgrade {
+		w.ResponseWriter.WriteHeader(statusCode)
+	}
 }
 
 func (w *wrappedWriter) Write(b []byte) (int, error) {
+	if !w.isWebSocketUpgrade {
+		w.ResponseWriter.Write(b)
+	}
+
 	if w.statusCode == 0 {
 		w.statusCode = http.StatusOK
+		//		w.ResponseWriter.WriteHeader(http.StatusOK)
 	}
 
 	return w.ResponseWriter.Write(b)
