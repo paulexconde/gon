@@ -1,6 +1,9 @@
 package logging
 
 import (
+	"bufio"
+	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -12,6 +15,25 @@ type wrappedWriter struct {
 	http.ResponseWriter
 	statusCode         int
 	isWebSocketUpgrade bool
+}
+
+func (w *wrappedWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	// Ensure the underlying ResponseWriter also implements http.Hijacker
+	hj, ok := w.ResponseWriter.(http.Hijacker)
+	if !ok {
+		// The underlying ResponseWriter does not support hijacking, which is a problem.
+		return nil, nil, fmt.Errorf("the ResponseWriter does not implement http.Hijacker")
+	}
+
+	// Call the Hijack method on the underlying ResponseWriter
+	return hj.Hijack()
+}
+
+func (w *wrappedWriter) Flush() {
+	flusher, ok := w.ResponseWriter.(http.Flusher)
+	if ok {
+		flusher.Flush()
+	}
 }
 
 func (w *wrappedWriter) WriteHeader(statusCode int) {
