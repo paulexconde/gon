@@ -1,6 +1,8 @@
 package session
 
 import (
+	"context"
+	"net/http"
 	"sync"
 	"time"
 )
@@ -54,4 +56,25 @@ func (store *SessionStore) DeleteSession(sessionID string) {
 	store.lock.Lock()
 	delete(store.Sessions, sessionID)
 	store.lock.Unlock()
+}
+
+func SessionMiddleware(store *SessionStore) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			sessionCookie, err := r.Cookie("session_id")
+
+			if err == http.ErrNoCookie {
+				// no session, handlers are remain functional even without a session
+			} else {
+				sess, _ := store.GetSession(sessionCookie.Value)
+
+				if sess != nil && sess.ExpiresAt.After(time.Now()) {
+					ctx := context.WithValue(r.Context(), Key, sess)
+					r = r.WithContext(ctx)
+				}
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }

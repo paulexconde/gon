@@ -19,3 +19,6 @@
 
 # Go workspace file
 go.work
+
+#Ignore main.go as it is use to as e2e testing
+main.go
