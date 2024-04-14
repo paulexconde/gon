@@ -2,6 +2,7 @@ package logging
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/paulexconde/gon/gon/logger"
@@ -29,6 +30,14 @@ func Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
+		if isWebSocketUpgrade(r) {
+			// Handle WebSocket separately
+			next.ServeHTTP(w, r)
+			// Log WebSocket upgrade - not interfering with headers or status code
+			logger.INFO("WebSocket upgrade requested", r.URL.Path, time.Since(start))
+			return
+		}
+
 		wrapped := &wrappedWriter{
 			ResponseWriter: w,
 		}
@@ -51,4 +60,20 @@ func Logging(next http.Handler) http.Handler {
 			logger.WARN(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
 		}
 	})
+}
+
+func isWebSocketUpgrade(r *http.Request) bool {
+	connHdr := ""
+	connHdrs := r.Header["Connection"]
+	if len(connHdrs) > 0 {
+		connHdr = connHdrs[0]
+	}
+
+	upgradeWebsocket := false
+	upgradeHdrs := r.Header["Upgrade"]
+	if len(upgradeHdrs) > 0 {
+		upgradeWebsocket = (strings.ToLower(upgradeHdrs[0]) == "websocket")
+	}
+
+	return connHdr == "Upgrade" && upgradeWebsocket
 }
