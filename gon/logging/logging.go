@@ -83,7 +83,7 @@ func Logging(next http.Handler) http.Handler {
 			} else if wrapped.statusCode >= 500 {
 				logger.ERROR(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
 			} else {
-				logger.WARN(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
+				logger.INFO(wrapped.statusCode, r.URL.Path, r.URL.Query().Encode(), time.Since(start))
 			}
 		} else {
 			logger.INFO("WS Connection", wrapped.statusCode, r.URL.Path, time.Since(start))
