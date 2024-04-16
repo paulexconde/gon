@@ -38,24 +38,24 @@ func (store *SessionStore) CreateSession() *Session {
 	}
 
 	store.lock.Lock()
+	defer store.lock.Unlock()
 	store.Sessions[sessionID] = session
-	store.lock.Unlock()
 
 	return session
 }
 
 func (store *SessionStore) GetSession(sessionID string) (*Session, bool) {
 	store.lock.RLock()
+	defer store.lock.RUnlock()
 	session, exists := store.Sessions[sessionID]
-	store.lock.Unlock()
 
 	return session, exists
 }
 
 func (store *SessionStore) DeleteSession(sessionID string) {
 	store.lock.Lock()
+	defer store.lock.Unlock()
 	delete(store.Sessions, sessionID)
-	store.lock.Unlock()
 }
 
 func SessionMiddleware(store *SessionStore) func(http.Handler) http.Handler {
