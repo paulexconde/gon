@@ -45,6 +45,7 @@ func (store *SessionStore) CreateSession() *Session {
 }
 
 func (store *SessionStore) GetSession(sessionID string) (*Session, bool) {
+	// Fix mutex
 	store.lock.RLock()
 	defer store.lock.RUnlock()
 	session, exists := store.Sessions[sessionID]
