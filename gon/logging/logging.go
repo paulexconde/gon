@@ -13,8 +13,8 @@ import (
 
 type wrappedWriter struct {
 	http.ResponseWriter
-	statusCode         int
-	isWebSocketUpgrade bool
+	statusCode int
+	hijacked   bool
 }
 
 func (w *wrappedWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
@@ -26,6 +26,7 @@ func (w *wrappedWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	}
 
 	// Call the Hijack method on the underlying ResponseWriter
+	w.hijacked = true
 	return hj.Hijack()
 }
 
@@ -37,16 +38,17 @@ func (w *wrappedWriter) Flush() {
 }
 
 func (w *wrappedWriter) WriteHeader(statusCode int) {
-	w.statusCode = statusCode
-
-	if !w.isWebSocketUpgrade {
-		w.ResponseWriter.WriteHeader(statusCode)
+	if w.hijacked {
+		return
 	}
+
+	w.statusCode = statusCode
+	w.ResponseWriter.WriteHeader(statusCode)
 }
 
 func (w *wrappedWriter) Write(b []byte) (int, error) {
-	if w.isWebSocketUpgrade {
-		return w.ResponseWriter.Write(b)
+	if w.hijacked {
+		return 0, fmt.Errorf("connection has been hijacked")
 	}
 
 	if w.statusCode == 0 {
@@ -63,8 +65,8 @@ func Logging(next http.Handler) http.Handler {
 		upgrade := isWebSocketUpgrade(r)
 
 		wrapped := &wrappedWriter{
-			ResponseWriter:     w,
-			isWebSocketUpgrade: upgrade,
+			ResponseWriter: w,
+			hijacked:       upgrade,
 		}
 
 		next.ServeHTTP(wrapped, r)
