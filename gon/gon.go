@@ -84,3 +84,17 @@ func (g *Gon) Start(address string) error {
 	}
 	return server.ListenAndServe()
 }
+
+// /Adapter
+func HandlerAdapter(h http.Handler) HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		h.ServeHTTP(w, r)
+		return nil
+	}
+}
+
+func (h HandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if err := h(w, r); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
